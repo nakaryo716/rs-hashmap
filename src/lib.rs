@@ -34,7 +34,7 @@ impl<K: Hash, V> HashMap<K, V> {
         todo!()
     }
 
-    pub fn get(&self) -> Option<&V> {
+    pub fn get(&self, key: K) -> Option<&V> {
         // calc hash
 
         // get bucket

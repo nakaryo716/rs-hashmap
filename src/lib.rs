@@ -12,38 +12,63 @@ pub struct HashMap<K, V> {
     size: usize,
 }
 
-impl<K: Hash, V> HashMap<K, V> {
+impl<K: PartialEq + Eq + Hash, V> HashMap<K, V> {
     pub fn new(bucket_size: usize) -> Self {
+        let mut buckets = Vec::with_capacity(bucket_size);
+        for _i in 0..bucket_size {
+            buckets.push(Vec::new());
+        }
+
         Self {
-            bucket_size: bucket_size,
-            buckets: Vec::with_capacity(bucket_size),
+            bucket_size,
+            buckets,
             size: 0,
         }
     }
 
     pub fn insert(&mut self, key: K, val: V) {
+        // FIXME:
         // resize
 
         // calc hash by key
+        let index = self.calculate_index_by_key(&key);
 
-        // bucket create if dose not exist
+        // get target bucket
+        let bucket = self.buckets.get_mut(index).unwrap();
 
         // verify key already exist
+        let mut same_key_entry = None;
+        for entry in bucket.iter_mut() {
+            if entry.key == key {
+                same_key_entry = Some(entry);
+            }
+        }
+        // replace entry
+        if let Some(entry) = same_key_entry {
+            *entry = Entry { key, val };
+            return;
+        }
 
         // insert value
-        todo!()
+        bucket.push(Entry { key, val });
+        self.size += 1;
     }
 
-    pub fn get(&self, key: K) -> Option<&V> {
+    pub fn get(&self, key: &K) -> Option<&V> {
         // calc hash
+        let index = self.calculate_index_by_key(key);
 
         // get bucket
+        let bucket = self.buckets.get(index).unwrap();
 
         // find value by key
-        todo!()
+        bucket
+            .iter()
+            .find(|v| v.key == *key)
+            .map(|v| &v.val)
     }
 
-    pub fn calculate_index_by_key(&self, key: K) -> usize {
+    pub fn calculate_index_by_key(&self, key: &K) -> usize {
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
         let hash = hasher.finish();
@@ -75,5 +100,24 @@ mod tests {
 
         assert_eq!(val.key, "hello");
         assert_eq!(val.val, "world");
+    }
+
+    #[test]
+    fn insert_and_get() {
+        let mut map = HashMap::new(32);
+        map.insert("hello", "world");
+
+        assert_eq!(map.get(&"hello"), Some(&"world"));
+        assert_eq!(map.get(&"none"), None);
+    }
+
+    #[test]
+    fn insert_modify_get() {
+        let mut map = HashMap::new(32);
+
+        map.insert("hello", "world");
+        map.insert("hello", "world2");
+
+        assert_eq!(map.get(&"hello"), Some(&"world2"));
     }
 }

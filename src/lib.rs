@@ -62,10 +62,25 @@ impl<K: PartialEq + Eq + Hash, V> HashMap<K, V> {
         let bucket = self.buckets.get(index).unwrap();
 
         // find value by key
-        bucket
-            .iter()
-            .find(|v| v.key == *key)
-            .map(|v| &v.val)
+        bucket.iter().find(|v| v.key == *key).map(|v| &v.val)
+    }
+
+    pub fn remove(&mut self, key: &K) -> Option<V> {
+        let index = self.calculate_index_by_key(key);
+        let bucket = self.buckets.get_mut(index).unwrap();
+
+        // FIXME:
+        // bad implementation for performance
+        //
+        // search index that match key from a bucket
+        let mut bucket_idx = None;
+        for (i, val) in bucket.iter().enumerate() {
+            if val.key == *key {
+                bucket_idx = Some(i);
+            }
+        }
+        // remove from bucket and swap elements
+        bucket_idx.map(|v| bucket.remove(v).val)
     }
 
     pub fn calculate_index_by_key(&self, key: &K) -> usize {
@@ -119,5 +134,15 @@ mod tests {
         map.insert("hello", "world2");
 
         assert_eq!(map.get(&"hello"), Some(&"world2"));
+    }
+
+    #[test]
+    fn remove() {
+        let mut map = HashMap::new(32);
+        map.insert("hello", "world");
+
+        assert_eq!(map.remove(&"hello"), Some("world"));
+        assert_eq!(map.remove(&"hello"), None);
+        assert_eq!(map.get(&"hello"), None);
     }
 }

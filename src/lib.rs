@@ -80,7 +80,10 @@ impl<K: PartialEq + Eq + Hash, V> HashMap<K, V> {
             }
         }
         // remove from bucket and swap elements
-        bucket_idx.map(|v| bucket.remove(v).val)
+        bucket_idx.map(|v| bucket.remove(v)).map(|entry| {
+            self.size -= 1;
+            entry.val
+        })
     }
 
     pub fn calculate_index_by_key(&self, key: &K) -> usize {

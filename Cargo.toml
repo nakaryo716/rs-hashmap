@@ -6,6 +6,6 @@ edition = "2024"
 [dependencies]
 
 
-[[examples]]
+[[example]]
 name = "main"
 path = "examples/main.rs"

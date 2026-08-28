@@ -86,6 +86,14 @@ impl<K: PartialEq + Eq + Hash, V> HashMap<K, V> {
         })
     }
 
+    pub fn len(&self) -> usize {
+        self.size
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.size == 0
+    }
+
     pub fn calculate_index_by_key(&self, key: &K) -> usize {
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
@@ -147,5 +155,24 @@ mod tests {
         assert_eq!(map.remove(&"hello"), Some("world"));
         assert_eq!(map.remove(&"hello"), None);
         assert_eq!(map.get(&"hello"), None);
+    }
+
+    #[test]
+    fn len() {
+        let mut map = HashMap::new(32);
+        assert_eq!(map.len(), 0);
+        assert!(map.is_empty());
+
+        map.insert("hello", "world");
+        assert_eq!(map.len(), 1);
+        map.insert("hello2", "world2");
+        assert_eq!(map.len(), 2);
+        assert!(!map.is_empty());
+
+        map.remove(&"hello");
+        assert_eq!(map.len(), 1);
+        map.remove(&"hello2");
+        assert_eq!(map.len(), 0);
+        assert!(map.is_empty());
     }
 }

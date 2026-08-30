@@ -1,5 +1,7 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
+const LOAD_FACTOR: f32 = 0.75;
+
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct Entry<K, V> {
     key: K,
@@ -8,7 +10,7 @@ struct Entry<K, V> {
 
 pub struct HashMap<K, V> {
     bucket_size: usize,
-    buckets: Vec<Vec<Entry<K, V>>>,
+    buckets: Option<Vec<Vec<Entry<K, V>>>>,
     size: usize,
 }
 
@@ -21,20 +23,23 @@ impl<K: PartialEq + Eq + Hash, V> HashMap<K, V> {
 
         Self {
             bucket_size,
-            buckets,
+            buckets: Some(buckets),
             size: 0,
         }
     }
 
     pub fn insert(&mut self, key: K, val: V) {
-        // FIXME:
         // resize
+        if self.size as f32 / self.bucket_size as f32 > LOAD_FACTOR {
+            self.resize_bucket(self.bucket_size * 2);
+        }
 
         // calc hash by key
         let index = self.calculate_index_by_key(&key);
 
         // get target bucket
-        let bucket = self.buckets.get_mut(index).unwrap();
+        let bucket = self.buckets.as_mut().unwrap();
+        let bucket = bucket.get_mut(index).unwrap();
 
         // verify key already exist
         let mut same_key_entry = None;
@@ -54,12 +59,35 @@ impl<K: PartialEq + Eq + Hash, V> HashMap<K, V> {
         self.size += 1;
     }
 
+    fn resize_bucket(&mut self, new_bucket_size: usize) {
+        // update bucket size
+        self.bucket_size = new_bucket_size;
+        // allocation new buckets
+        let mut new_buckets = Vec::with_capacity(new_bucket_size);
+        for _i in 0..new_bucket_size {
+            new_buckets.push(Vec::new());
+        }
+
+        // reinsert
+        for bucket in self.buckets.take().unwrap() {
+            for entry in bucket {
+                let index = self.calculate_index_by_key(&entry.key);
+
+                let target_bucket = new_buckets.get_mut(index).unwrap();
+                target_bucket.push(entry);
+            }
+        }
+
+        self.buckets = Some(new_buckets);
+    }
+
     pub fn get(&self, key: &K) -> Option<&V> {
         // calc hash
         let index = self.calculate_index_by_key(key);
 
         // get bucket
-        let bucket = self.buckets.get(index).unwrap();
+        let bucket = self.buckets.as_ref().unwrap();
+        let bucket = bucket.get(index).unwrap();
 
         // find value by key
         bucket.iter().find(|v| v.key == *key).map(|v| &v.val)
@@ -67,7 +95,8 @@ impl<K: PartialEq + Eq + Hash, V> HashMap<K, V> {
 
     pub fn remove(&mut self, key: &K) -> Option<V> {
         let index = self.calculate_index_by_key(key);
-        let bucket = self.buckets.get_mut(index).unwrap();
+        let bucket = self.buckets.as_mut().unwrap();
+        let bucket = bucket.get_mut(index).unwrap();
 
         // FIXME:
         // bad implementation for performance
@@ -111,18 +140,18 @@ mod tests {
     fn test_map() {
         let mut a = HashMap::<String, String>::new(10);
 
-        if a.buckets.get_mut(0).is_none() {
-            a.buckets.push(Vec::new());
+        if a.buckets.as_mut().unwrap().get_mut(0).is_none() {
+            a.buckets.as_mut().unwrap().push(Vec::new());
         }
 
-        let val = a.buckets.get_mut(0).unwrap();
+        let val = a.buckets.as_mut().unwrap().get_mut(0).unwrap();
 
         val.push(Entry {
             key: "hello".into(),
             val: "world".into(),
         });
 
-        let val = &a.buckets[0].pop().unwrap();
+        let val = &a.buckets.as_mut().unwrap()[0].pop().unwrap();
 
         assert_eq!(val.key, "hello");
         assert_eq!(val.val, "world");
@@ -174,5 +203,22 @@ mod tests {
         map.remove(&"hello2");
         assert_eq!(map.len(), 0);
         assert!(map.is_empty());
+    }
+
+    #[test]
+    fn resize() {
+        let mut map = HashMap::new(1);
+
+        map.insert("hello0", "world0");
+        map.insert("hello1", "world1");
+        map.insert("hello2", "world2");
+        map.insert("hello3", "world3");
+        map.insert("hello4", "world4");
+
+        assert_eq!(map.get(&"hello0"), Some(&"world0"));
+        assert_eq!(map.get(&"hello1"), Some(&"world1"));
+        assert_eq!(map.get(&"hello2"), Some(&"world2"));
+        assert_eq!(map.get(&"hello3"), Some(&"world3"));
+        assert_eq!(map.get(&"hello4"), Some(&"world4"));
     }
 }

@@ -60,25 +60,8 @@ impl<K: PartialEq + Eq + Hash, V> HashMap<K, V> {
     }
 
     fn resize_bucket(&mut self, new_bucket_size: usize) {
-        // update bucket size
+        self.buckets = Some(rehash(self.buckets.take().unwrap(), new_bucket_size));
         self.bucket_size = new_bucket_size;
-        // allocation new buckets
-        let mut new_buckets = Vec::with_capacity(new_bucket_size);
-        for _i in 0..new_bucket_size {
-            new_buckets.push(Vec::new());
-        }
-
-        // reinsert
-        for bucket in self.buckets.take().unwrap() {
-            for entry in bucket {
-                let index = self.calculate_index_by_key(&entry.key);
-
-                let target_bucket = new_buckets.get_mut(index).unwrap();
-                target_bucket.push(entry);
-            }
-        }
-
-        self.buckets = Some(new_buckets);
     }
 
     pub fn get(&self, key: &K) -> Option<&V> {
@@ -123,13 +106,37 @@ impl<K: PartialEq + Eq + Hash, V> HashMap<K, V> {
         self.size == 0
     }
 
-    pub fn calculate_index_by_key(&self, key: &K) -> usize {
-        let mut hasher = DefaultHasher::new();
-        key.hash(&mut hasher);
-        let hash = hasher.finish();
-
-        hash as usize % self.bucket_size
+    fn calculate_index_by_key(&self, key: &K) -> usize {
+        calculate_index(key, self.bucket_size)
     }
+}
+
+fn calculate_index<K: PartialEq + Eq + Hash>(key: &K, bucket_size: usize) -> usize {
+    let mut hasher = DefaultHasher::new();
+    key.hash(&mut hasher);
+    let hash = hasher.finish();
+
+    hash as usize % bucket_size
+}
+
+fn rehash<K: PartialEq + Eq + Hash, V>(
+    buckets: Vec<Vec<Entry<K, V>>>,
+    new_bucket_size: usize,
+) -> Vec<Vec<Entry<K, V>>> {
+    // allocation new buckets
+    let mut new_buckets = Vec::with_capacity(new_bucket_size);
+    for _i in 0..new_bucket_size {
+        new_buckets.push(Vec::new());
+    }
+
+    // reinsert
+    for bucket in buckets {
+        for entry in bucket {
+            let index = calculate_index(&entry.key, new_bucket_size);
+            new_buckets[index].push(entry);
+        }
+    }
+    new_buckets
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
+const DEFAULT_BUCKET_SIZE: usize = 8;
 const LOAD_FACTOR: f32 = 0.75;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -15,7 +16,11 @@ pub struct HashMap<K, V> {
 }
 
 impl<K: PartialEq + Eq + Hash, V> HashMap<K, V> {
-    pub fn new(bucket_size: usize) -> Self {
+    pub fn new() -> Self {
+        HashMap::new_inner(DEFAULT_BUCKET_SIZE)
+    }
+
+    fn new_inner(bucket_size: usize) -> Self {
         let mut buckets = Vec::with_capacity(bucket_size);
         for _i in 0..bucket_size {
             buckets.push(Vec::new());
@@ -145,7 +150,7 @@ mod tests {
 
     #[test]
     fn test_map() {
-        let mut a = HashMap::<String, String>::new(10);
+        let mut a = HashMap::<String, String>::new();
 
         if a.buckets.as_mut().unwrap().get_mut(0).is_none() {
             a.buckets.as_mut().unwrap().push(Vec::new());
@@ -166,7 +171,7 @@ mod tests {
 
     #[test]
     fn insert_and_get() {
-        let mut map = HashMap::new(32);
+        let mut map = HashMap::new();
         map.insert("hello", "world");
 
         assert_eq!(map.get(&"hello"), Some(&"world"));
@@ -175,7 +180,7 @@ mod tests {
 
     #[test]
     fn insert_modify_get() {
-        let mut map = HashMap::new(32);
+        let mut map = HashMap::new();
 
         map.insert("hello", "world");
         map.insert("hello", "world2");
@@ -185,7 +190,7 @@ mod tests {
 
     #[test]
     fn remove() {
-        let mut map = HashMap::new(32);
+        let mut map = HashMap::new();
         map.insert("hello", "world");
 
         assert_eq!(map.remove(&"hello"), Some("world"));
@@ -195,7 +200,7 @@ mod tests {
 
     #[test]
     fn len() {
-        let mut map = HashMap::new(32);
+        let mut map = HashMap::new();
         assert_eq!(map.len(), 0);
         assert!(map.is_empty());
 
@@ -214,7 +219,7 @@ mod tests {
 
     #[test]
     fn resize() {
-        let mut map = HashMap::new(1);
+        let mut map = HashMap::new_inner(1);
 
         map.insert("hello0", "world0");
         map.insert("hello1", "world1");

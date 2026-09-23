@@ -1,7 +1,7 @@
 use rs_hashmap::HashMap;
 
 fn main() {
-    let mut map = HashMap::new(32);
+    let mut map = HashMap::new();
 
     map.insert("rust", "cargo");
     map.insert("java", "maven");
